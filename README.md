@@ -1,5 +1,12 @@
-# Twitter_bot を作成しました。
+# Twitter_bot を作成しました
 
+### 概要
+私の推しのアカウントを1分間隔でチェックして、プロフィールに変更があればツイートして通知するbotです。
+
+### 使用したもの
+- Heroku
+- Twitter API
+- Google Sheet API
 
 ### 参考
 - [heroku + Python で Vtuber Twitter bot 作る](https://qiita.com/iroiro_bot/items/3406caf025e89b8f7a25 'heroku + Python で Vtuber Twitter bot 作る')
