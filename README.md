@@ -4,6 +4,7 @@
 私の推しのアカウントを1分間隔でチェックして、プロフィールに変更があればツイートして通知するbotです。
 
 ### 使用したもの
+- Python3.9
 - Heroku
 - Twitter API
 - Google Sheet API
