@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from dics import members
-import os
-from os.path import join, dirname
-import unicodedata
+from dics import members, color_dic
+from PIL import Image, ImageDraw
+from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
+from os.path import join, dirname
+import os
+import unicodedata
 import gspread
 import json
 import re
 import tweepy
 import urllib.request
 import urllib.error
-from PIL import Image, ImageDraw
-from dotenv import load_dotenv
+import time
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
+sl_time = 3
 
 # Twitterでツイートしたりデータを取得したりする準備
+
+
 def twitter_api():
 
     CONSUMER_KEY = os.environ['API_KEY']
@@ -100,30 +104,23 @@ def download_image(url, dst_path):
 
 # 画像と一緒にツイートする
 # tweetはツイートする文章、filesは画像のパスのlist
-def tweet_with_imgs(tweet, files):
+def tweet_with_imgs(tweet, img):
     api = twitter_api()
-
-    # media_idsは投稿したい画像のidを入れるためのリスト
-    media_ids = []
-
-    for i in range(len(files)):
-        img = api.media_upload(files[i])
-        media_ids.append(img.media_id_string)
-
     time.sleep(sl_time)
-    api.update_status(status=tweet, media_ids=media_ids)
+    api.update_with_media(filename=img, status=tweet)
 
 
 # 2つの画像をつなげた画像を作る
 # im1_path, im2_pathでパスを指定した2画像を矢印でつなげ、gen_img_nameというパスに保存
-def concatenate_icon(im1_path, im2_path, gen_img_name):
+# アイコン用
+def concatenate_icon(im1_path, im2_path, gen_img_name, name):
     im1 = Image.open(im1_path)
     im2 = Image.open(im2_path)
 
     void_pix = 30
     dst_width = im1.width + im2.width + void_pix
     dst_height = max(im1.height, im2.height)
-    dst = Image.new('RGBA', (dst_width, dst_height))
+    dst = Image.new('RGBA', (dst_width, dst_height), (128, 128, 128))
     dst.paste(im1, (0, 0))
     dst.paste(im2, (im1.width + void_pix, 0))
 
@@ -137,7 +134,47 @@ def concatenate_icon(im1_path, im2_path, gen_img_name):
     arrow_coor = (line_xp+line_width/2, line_y,
                   arrow_x, line_y+line_width,
                   arrow_x, line_y-line_width)
-    line_c = (70, 170, 255)
+
+    line_c = (color_dic[name][0], color_dic[name][1], color_dic[name][2])
+
+    draw.line(line_coor, fill=line_c, width=line_width)
+    draw.polygon(arrow_coor, fill=line_c)
+    dst.save(gen_img_name)
+
+
+# 2つの画像をつなげた画像を作る
+# ヘッダー用 アイコン用とやってることは同じ
+def concatenate_header(im1_path, im2_path, gen_img_name, name):
+    im1 = Image.open(im1_path)
+    im2 = Image.open(im2_path)
+
+    void_pix = 30
+
+    dst_width = max(im1.width, im2.width)
+    dst_height = im1.height + im2.height + void_pix
+    dst = Image.new('RGBA', (dst_width, dst_height), (128, 128, 128))
+    dst.paste(im1, (0, 0))
+    dst.paste(im2, (0, im1.height + void_pix))
+
+    # ImageDrawオブジェクトの生成
+    draw = ImageDraw.Draw(dst)
+    line_x = int(im1.width / 2)
+    line_ym = int(im1.height - 10)
+    line_yp = int(dst_height - im2.height + 15)
+
+    line_width = 30
+    arrow_y = line_yp - 10
+
+    line_coor = (line_x, line_ym, line_x, line_yp)
+
+    # 三角形の描画
+    # 3つの頂点の座標
+    arrow_coor = (line_x + line_width, arrow_y,
+                  line_x - line_width, arrow_y,
+                  line_x, line_yp + line_width/2)
+
+    line_c = (color_dic[name][0], color_dic[name][1], color_dic[name][2])
+
     draw.line(line_coor, fill=line_c, width=line_width)
     draw.polygon(arrow_coor, fill=line_c)
     dst.save(gen_img_name)
