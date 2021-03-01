@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 from tools import twitter_api
 import os
 import time
-#import requests
+import requests
 import json
+import tweepy
 
 api = twitter_api()
 sl_time = 3

@@ -1,12 +1,12 @@
 # botが見るVTuberのリスト
-members = [VTUBER_NAME]
+members = ['NAME']
 
 # TwitterのURL
 # mobile版のURLにすること
-tw_url_dic = {VTUBER_NAME: URL}
+tw_url_dic = {'NAME': 'Twitter_URL'}
 
 # twitter idの辞書
-tw_id_dic = {VTUBER_NAME: TWITTER_ID}
+tw_id_dic = {'NAME': Twitter_ID}
 
 # カラーの辞書
-color_dic = {VTUBER_NAME: [255, 255, 255]}
+color_dic = {'NAME': [255, 255, 255]}

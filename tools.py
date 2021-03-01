@@ -2,6 +2,8 @@
 from __future__ import print_function
 from dics import members, color_dic
 from PIL import Image, ImageDraw
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
 from os.path import join, dirname
@@ -18,13 +20,14 @@ import time
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
+# drive_folder_ID
+folder_id = os.environ['GOOGLE_DRIVE_DIR_ID']
+
 sl_time = 3
 
+
 # Twitterでツイートしたりデータを取得したりする準備
-
-
 def twitter_api():
-
     CONSUMER_KEY = os.environ['API_KEY']
     CONSUMER_SECRET = os.environ['API_SECRET_KEY']
     ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
@@ -39,13 +42,16 @@ def twitter_api():
 
 # GCP認証
 def google_api():
-    dotenv_path = join(dirname(__file__), '.env')
-    load_dotenv(dotenv_path)
-
     # 認証部分
     # 2つのAPIを記述しないとリフレッシュトークンを3600秒毎に発行し続けなければならない
+    """
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
+    """
+    scope = ['https://spreadsheets.google.com/feeds',
+             'https://www.googleapis.com/auth/drive',
+             'https://www.googleapis.com/auth/drive.file',
+             'https://www.googleapis.com/auth/drive.install']
 
     # 辞書オブジェクト。認証に必要な情報をHerokuの環境変数から呼び出している
     credential = {
@@ -66,6 +72,7 @@ def google_api():
         credential, scope)
 
     # OAuth2の資格情報を使用してGoogle APIにログインします。
+    # spreadsheet用
     gc = gspread.authorize(credentials)
 
     # 共有設定したスプレッドシートキーを変数[SPREADSHEET_KEY]に格納する。
@@ -74,7 +81,13 @@ def google_api():
     # 共有設定したスプレッドシートのシート1を開く
     worksheet = gc.open_by_key(SPREADSHEET_KEY).sheet1
 
-    return worksheet
+    # pydrive用にOAuth認証を行う
+    gauth = GoogleAuth()
+    gauth.credentials = credentials
+    drive = GoogleDrive(gauth)
+
+    # sheet と drive 認証情報を返す
+    return worksheet, drive
 
 
 # cell_dict(main) が空の場合、取ったデータを書き出す
@@ -92,6 +105,57 @@ def update_sheet(contents, worksheet):
     return cell_dict
 
 
+# drive に アイコン、ヘッダーを上げる
+# drive からダウンロードする
+def drive_img_up_down_load(drive, contents, members):
+    drive_icon_img = '{}_icon_{}.png'
+    drive_header_img = '{}_header_{}.png'
+
+    folder_len = drive.ListFile(
+        {'q': '"{}" in parents'.format(folder_id)}).GetList()
+
+    # len(folder_len) == 0 が true なら drive にアップ
+    if len(folder_len) == 0:
+        for name in members:
+            icon_name = drive_icon_img.format('old', name)
+            header_name = drive_header_img.format('old', name)
+
+            icon_img_2 = drive.CreateFile(
+                {'parents': [{'kind': 'drive#fileLink', 'id': folder_id}]})
+            icon_img_2.SetContentFile(icon_name)
+            icon_img_2.Upload()
+            # icon_ids.append(icon_img_2['id'])
+
+            header_img_2 = drive.CreateFile(
+                {'parents': [{'kind': 'drive#fileLink', 'id': folder_id}]})
+            header_img_2.SetContentFile(header_name)
+            header_img_2.Upload()
+            # header_ids.append(header_img_2['id'])
+    else:
+        # len(folder_len) == 0 が falth なら drive からダウンロード
+        for f in folder_len:
+            #f.GetContentFile(os.path.join('file', f['title']))
+            f.GetContentFile(f['title'])
+
+
+# 変更された画像をアップロード
+def drive_img_update(drive, contents, members, update_img):
+    # 最新版を更新
+    folder_len = drive.ListFile(
+        {'q': '"{}" in parents'.format(folder_id)}).GetList()
+
+    for f in folder_len:
+        if f['title'] == update_img:
+            f_id = f['id']
+
+    file_ud = drive.CreateFile({'title': update_img,
+                                # 'mimeType': 'image/png',
+                                'parents': [{'kind': 'drive#fileLink', 'id': folder_id}],
+                                'id': f_id})
+    file_ud.SetContentFile(update_img)
+    file_ud.Upload()
+
+
 # urlにある画像をdst_pathで指定したパスにダウンロードする
 def download_image(url, dst_path):
     try:
@@ -99,7 +163,7 @@ def download_image(url, dst_path):
         with open(dst_path, mode="wb") as f:
             f.write(data)
     except urllib.error.URLError as e:
-        print(e)
+        print(download_error_img)
 
 
 # 画像と一緒にツイートする
@@ -125,10 +189,10 @@ def concatenate_icon(im1_path, im2_path, gen_img_name, name):
     dst.paste(im2, (im1.width + void_pix, 0))
 
     draw = ImageDraw.Draw(dst)
-    line_xm = int(im1.width - 5)
-    line_xp = int(dst_width - im2.width - 5)
+    line_xm = int(im1.width - 15)
+    line_xp = int(dst_width - im2.width + 10)
     line_y = int(dst_height / 2)
-    line_width = 20
+    line_width = 30
     arrow_x = line_xp - 5
     line_coor = (line_xm, line_y, line_xp, line_y)
     arrow_coor = (line_xp+line_width/2, line_y,
@@ -149,7 +213,6 @@ def concatenate_header(im1_path, im2_path, gen_img_name, name):
     im2 = Image.open(im2_path)
 
     void_pix = 30
-
     dst_width = max(im1.width, im2.width)
     dst_height = im1.height + im2.height + void_pix
     dst = Image.new('RGBA', (dst_width, dst_height), (128, 128, 128))
@@ -159,10 +222,10 @@ def concatenate_header(im1_path, im2_path, gen_img_name, name):
     # ImageDrawオブジェクトの生成
     draw = ImageDraw.Draw(dst)
     line_x = int(im1.width / 2)
-    line_ym = int(im1.height - 10)
+    line_ym = int(im1.height - 20)
     line_yp = int(dst_height - im2.height + 15)
 
-    line_width = 30
+    line_width = 40
     arrow_y = line_yp - 10
 
     line_coor = (line_x, line_ym, line_x, line_yp)

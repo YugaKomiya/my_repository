@@ -2,7 +2,7 @@
 from __future__ import print_function
 from dics import members, color_dic
 from get_data import get_twitter_profile
-from tools import twitter_api, google_api, update_sheet, download_image, concatenate_icon, concatenate_header, tweet_with_imgs
+from tools import twitter_api, google_api, update_sheet, drive_img_up_down_load, download_image, concatenate_icon, concatenate_header, tweet_with_imgs, drive_img_update
 import time
 import datetime
 import os
@@ -14,11 +14,13 @@ api = twitter_api()
 
 rn_time = 1  # 何分ごとにプロフを取得するか
 all_num = len(members)
-sl_time = 3
 
 icon_img = './{}_icon_{}.png'
 header_img = './{}_header_{}.png'
 concatenate_img = './{}_concatenate_{}.png'
+
+drive_icon_img = '{}_icon_{}.png'
+drive_header_img = '{}_header_{}.png'
 
 
 # Twitterプロフの変更を検知してツイートする
@@ -30,16 +32,39 @@ def tw_log_notification():
         # プロフ情報を取得
         contents.update({name: get_twitter_profile(name)})
         # アイコンとヘッダーの画像を保存
+        # 画像がなければ動く
         # ローカルに保存
         if not os.path.exists(icon_img.format('old', name)):
+            # twitter からとってきてる
             download_image(contents[name]['アイコン'],
                            icon_img.format('old', name))
         if not os.path.exists(header_img.format('old', name)):
             download_image(contents[name]['ヘッダー'],
                            header_img.format('old', name))
 
+    # user_id(@), ハッシュタグ(#) の加工
+    for name in members:
+        for key in contents[name].keys():
+            # None 対策
+            if contents[name][key] == None:
+                contents[name][key] = ''
+            contents[name][key] = contents[name][key].replace('@', '@.')
+            contents[name][key] = contents[name][key].replace('#', '#.')
+
+    # Google_apis は spreadsheet と　drive　の認証情報を持つ
+    Google_apis = []
+    Google_apis = google_api()
+
+    # Google_apis が持つ情報を振り分け
+    worksheet = Google_apis[0]
+    drive = Google_apis[1]
+
+    # アイコン, ヘッダーをdrive に保存
+    # driveのフォルダが空ならupload
+    # drive に既に上がっていれば driveからダウンロード
+    drive_img_up_down_load(drive, contents, members)
+
     # 古いデータをsheetから取り出す
-    worksheet = google_api()
     cell_dict = []
     cell_dict = worksheet.get_all_records(
         empty2zero=False, head=1, default_blank='')
@@ -63,7 +88,7 @@ def tw_log_notification():
     # ツイートする
     def make_tweet(name, key):
         print('{} {}'.format(name, key))
-        tweet = '{}さんが{}を変更されました。\n\n'.format(name, key)
+        tweet = '{}さんの{}が変更されました。\n\n'.format(name, key)
 
         if key == 'bio':
             print(key)
@@ -93,9 +118,12 @@ def tw_log_notification():
                                    icon_img.format('new', name))
                     concatenate_icon(icon_img.format('old', name), icon_img.format(
                         'new', name), concatenate_img.format('tw', name), name)
+
                     tweet_with_imgs(tweet, concatenate_img.format('tw', name))
                     os.rename(icon_img.format('new', name),
                               icon_img.format('old', name))
+                    drive_img_update(drive, contents, members,
+                                     drive_icon_img.format('old', name))
 
                 elif key == 'ヘッダー':
                     print(key)
@@ -103,9 +131,13 @@ def tw_log_notification():
                                    header_img.format('new', name))
                     concatenate_header(header_img.format('old', name), header_img.format(
                         'new', name), concatenate_img.format('tw', name), name)
+
                     tweet_with_imgs(tweet, concatenate_img.format('tw', name))
                     os.rename(header_img.format('new', name),
                               header_img.format('old', name))
+                    drive_img_update(drive, contents, members,
+                                     drive_header_img.format('old', name))
+
                 print('tweeted_{}'.format(key))
 
             except tweepy.error.TweepError:
@@ -118,7 +150,7 @@ def tw_log_notification():
                 try:
                     tweet += '{}\n'.format(old_contents[name][key])
                     tweet += '  ↓\n'
-                    tweet += '{}\n'.format(contents[name][key])
+                    tweet += '{}'.format(contents[name][key])
                     api.update_status(status=tweet)
                     print(tweet)
                 except tweepy.error.TweepError:
@@ -131,9 +163,6 @@ def tw_log_notification():
     for row, name in enumerate(members):
         col = 1
         for key in contents[name].keys():
-            # None 対策
-            if contents[name][key] == None:
-                contents[name][key] = ''
             if contents[name][key] != old_contents[name][key]:
                 if key == '場所' and contents[name]['場所'] == '':
                     print('{} None'.format(name))
@@ -158,36 +187,3 @@ if __name__ == '__main__':
     print(time.time() - start_)
     print('sched work start')
     sched.start()
-
-
-"""
-        elif key == 'アイコン':
-            print(key)
-            try:
-                download_image(contents[name][key],
-                               icon_img.format('new', name))
-                concatenate_icon(icon_img.format('old', name), icon_img.format(
-                    'new', name), concatenate_img.format('tw', name), name)
-                tweet_with_imgs(tweet, concatenate_img.format('tw', name))
-                os.rename(icon_img.format('new', name),
-                          icon_img.format('old', name))
-                print('tweeted_{}'.format(key))
-            except tweepy.error.TweepError:
-                dir(tweepy.error.TweepError)
-                print('error_{}'.format(key))
-
-        elif key == 'ヘッダー':
-            print(key)
-            try:
-                download_image(contents[name][key],
-                               header_img.format('new', name))
-                concatenate_header(header_img.format('old', name), header_img.format(
-                    'new', name), concatenate_img.format('tw', name), name)
-                tweet_with_imgs(tweet, concatenate_img.format('tw', name))
-                os.rename(header_img.format('new', name),
-                          header_img.format('old', name))
-                print('tweeted_{}'.format(key))
-            except tweepy.error.TweepError:
-                dir(tweepy.error.TweepError)
-                print('error_{}'.format(key))
-        """
