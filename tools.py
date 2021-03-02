@@ -221,11 +221,11 @@ def concatenate_header(im1_path, im2_path, gen_img_name, name):
 
     # ImageDrawオブジェクトの生成
     draw = ImageDraw.Draw(dst)
-    line_x = int(im1.width / 2)
-    line_ym = int(im1.height - 20)
-    line_yp = int(dst_height - im2.height + 15)
+    line_x = int(im1.width / 2)  # x軸 画像の横中央に入れる
+    line_ym = int(im1.height - 35)  # y軸の上 1枚目と被る部分
+    line_yp = int(dst_height - im2.height + 15)  # y軸の上 1枚目と被る部分
 
-    line_width = 40
+    line_width = 80
     arrow_y = line_yp - 10
 
     line_coor = (line_x, line_ym, line_x, line_yp)
