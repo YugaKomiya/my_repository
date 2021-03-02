@@ -17,3 +17,4 @@
 - [【herokuコマンド】createからdestroyまで](https://qiita.com/chihiro/items/5c3ff400f6cb99deb945 '【herokuコマンド】createからdestroyまで')
 - [Python, PyDriveでGoogle Driveのダウンロード、アップロード、削除など](https://note.nkmk.me/python-pydrive-download-upload-delete/ 'Python, PyDriveでGoogle Driveのダウンロード、アップロード、削除など')
 - [ラズパイのカメラ画像をGoogle Driveに上げる](https://www.t88.work/entry/hydro_iot_pjt08 'ラズパイのカメラ画像をGoogle Driveに上げる')
+- [pythonでGoogle Driveの任意のフォルダにスプレッドシートを作成・編集する](https://qiita.com/koshitake2m2/items/9843ca8e38f425af4896 'pythonでGoogle Driveの任意のフォルダにスプレッドシートを作成・編集する')
