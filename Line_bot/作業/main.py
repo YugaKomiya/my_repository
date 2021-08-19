@@ -170,8 +170,8 @@ def handle_message(event):
 
         else:
             for res in sql_result:
-                txt = f'曲名:{res[0]}\n配信日:{res[3]}\n枠名:{res[4]}\nurl:{res[1]}'
-                txt_list.append(f'{txt}\n\n')
+                txt = f'曲名:{res[0]}\n配信日:{res[3]}\n枠名:{res[4]}\nurl:{res[1]}\n'
+                txt_list.append(f'{txt}')
 
             str = ''.join(txt_list)
             line_bot_api.reply_message(
@@ -181,6 +181,6 @@ def handle_message(event):
 
 # ポート番号の設定
 if __name__ == "__main__":
-    # app.run()
-    port = int(os.getenv('PORT'))
-    app.run(host="0.0.0.0", port=port)
+    app.run()
+    #port = int(os.getenv('PORT'))
+    #app.run(host="0.0.0.0", port=port)
