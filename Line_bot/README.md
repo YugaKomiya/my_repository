@@ -10,7 +10,7 @@ Youtubeで配信者として活動している"推し"はめちゃくちゃ歌�
 - Heroku
 - Line Messaging API
 - PostgreSQL
-- ~~Google Sheet API~~
+- ~~Google Sheet API~~ (いらないかな)
 
 ## 参考(追加していく)
 - [Herokuでサンプルボットを作成する](https://developers.line.biz/ja/docs/messaging-api/building-sample-bot-with-heroku/)
