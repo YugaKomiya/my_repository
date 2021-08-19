@@ -59,7 +59,7 @@ def db_connect():
 # 返事取得関数（今は暫定で日付返す関数）
 def get_response_message(mes_from, con):
     if len(mes_from) < 2:
-        return 'ひらがな2文字以上入力してね'
+        return -1
 
     sql = f"select song_title, song_url, initial, day, stream_title from song_list where song_title like '{mes_from}%' or initial like '{mes_from}%'  ORDER BY day asc"
     result = select_execute(con, sql)
@@ -109,10 +109,13 @@ def handle_message(event):
     url_list = []
     txt_list = []
 
-    if sql_result == '2文字以上入力してね':
+    # lineの仕様により、reply_messageで返信可能なメッセージ数が
+    # 最大5件のための見苦しい対応をしています。
+
+    if sql_result == -1:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=sql_result))
+            TextSendMessage(text='(ひらがな)2文字以上入力してね'))
     else:
         """
         if len(sql_result) == 1:
