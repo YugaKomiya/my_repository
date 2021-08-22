@@ -12,6 +12,15 @@ Youtubeで配信者として活動している"推し"はめちゃくちゃ歌�
 - PostgreSQL
 - ~~Google Sheet API~~ (いらないかな)
 
-## 参考(追加していく)
+## Special Thanks
+DBにはリスナーさんが作成したお歌DBを基にしました。</br>
+これがなければ僕はこの仕組みを作れなかった。本当にありがとうございます。</br>
+お歌配信アーカイブにタイムテーブルを作成してくれるリスナーさん、</br>
+配信に来られてるリスナーさん全てのBigLoveと熱量に最大の敬意と感謝を。
+
+## 参考
+- [LINE Developers](https://developers.line.biz/ja/)
 - [Herokuでサンプルボットを作成する](https://developers.line.biz/ja/docs/messaging-api/building-sample-bot-with-heroku/)
 - [素人が1ヶ月でLINE BOTに挑戦する毎日note.](https://note.com/96nz/m/md28b901bbba5)
+- [line/line-bot-sdk-python](https://github.com/line/line-bot-sdk-python)
+- [Canva](https://www.canva.com/)
