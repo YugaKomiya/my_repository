@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
 # 画面を作るやつら
 # 必要モジュールの読み込み
-from flask import Flask, request, abort
 
 from linebot.models import *
-
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
 from linebot import (
     LineBotApi, WebhookHandler
 )
+from flask import Flask, request, abort
 from sql_generate import song_title_choice, date_template_make, date_choice, stream_title_choice, artist_choice
-from os.path import join, dirname
-from dotenv import load_dotenv
 from local_config import TEXT_00, TEXT_01, TEXT_02, TEXT_03
 from db_access import db_connect, update_state, select_execute, id_search
+from insert_data import insert_song_date
+from os.path import join, dirname
+from dotenv import load_dotenv
 import os
-import sys
-import pprint
-import psycopg2
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -33,6 +30,7 @@ handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 USER_ID = 0
 STATE = 0
+MY_LINE_ID = os.environ['MY_LINE_ID']
 defo_STATE = 0
 con = db_connect()
 
@@ -138,10 +136,10 @@ def handle_message(event):
         message = '(ひらがな)2文字以上入力してね'
         reply_message(event, message)
 
-    if message_txt == TEXT_00:
+    elif message_txt == TEXT_00:
         state = 0
         STATE = mendo(con, USER_ID, state)
-        #message = song_title_choice(USER_ID)
+        # message = song_title_choice(USER_ID)
         message = '曲名を入力してね'
         reply_message(event, message)
 
@@ -149,7 +147,7 @@ def handle_message(event):
         state = 1
         STATE = mendo(con, USER_ID, state)
         # <- このmessage は日付選択のメニューをつくるので変えたらだめ
-        messages = date_template_make(USER_ID)
+        messages = date_template_make()
         line_bot_api.reply_message(
             event.reply_token,
             messages
@@ -167,36 +165,55 @@ def handle_message(event):
         message = 'アーティスト名を入力してね'
         reply_message(event, message)
 
-    elif message_txt == '初音ミク' or message_txt == '鏡音リン' or message_txt == '鏡音レン':
-        message = '申し訳ありませんがこのワードは現在ご利用になれません。\n検索結果が大量に出力されてlineがパンクしてしまいます。\n申し訳ありませんが曲などから再度お探しください🙇‍♂️'
-        reply_message(event, message)
-
-    elif message_txt == '初音' or message_txt == '鏡音':
-        message = '申し訳ありませんがこのワードは現在ご利用になれません。\n検索結果が大量に出力されてlineがパンクしてしまいます。\n申し訳ありませんが曲などから再度お探しください🙇‍♂️'
-        reply_message(event, message)
-
     else:
         if STATE == 0:
-            sql = song_title_choice(event)
-            sql_result_recive(event, sql)
+            try:
+                sql = song_title_choice(event)
+                sql_result_recive(event, sql)
 
-        # elif STATE == 1:
+            except LineBotApiError:
+                print('00')
+                message = 'エラーが発生したようです。時間を置いて再度お試しください。'
+                reply_message(event, message)
+                error_mes = f"{STATE}\n{message_txt}\nerror_code=00"
+                push_error_message(error_mes)
+
+        elif STATE == 1:
+            message = '日付を選択してください'
+            reply_message(event, message)
             # def handle_postback で 日付入力を受け付ける
             # sql_result_recive(event, sql)
-            #message = '日付を選べ'
-            #reply_message(event, message)
+            # message = '日付を選べ'
+            # reply_message(event, message)
 
         elif STATE == 2:
-            sql = stream_title_choice(event)
-            sql_result_recive(event, sql)
+            try:
+                sql = stream_title_choice(event)
+                sql_result_recive(event, sql)
+            except LineBotApiError:
+                print('02')
+                message = 'エラーが発生したようです。時間を置いて再度お試しください。'
+                reply_message(event, message)
+                error_mes = f"{STATE}\n{message_txt}\nerror_code=02"
+                push_error_message(error_mes)
 
         elif STATE == 3:
-            sql = artist_choice(event)
-            sql_result_recive(event, sql)
+            try:
+                sql = artist_choice(event)
+                sql_result_recive(event, sql)
+
+            except LineBotApiError:
+                print('03')
+                message = 'エラーが発生したようです。時間を置いて再度お試しください。'
+                reply_message(event, message)
+
+                error_mes = f"{STATE}\n{message_txt}\nerror_code=03"
+                push_error_message(message)
 
         else:
-            message = 'このメッセージは意図しないものなので、見た方は速やかに管理者に連絡してください'
-            reply_message(event, event.message.text)
+            message = '例外エラーが発生しました。時間を置いて再度お試しください。'
+            reply_message(event, message)
+            push_error_message(message)
 
 
 # めんどい作業をまとめた
@@ -211,21 +228,27 @@ def sql_result_recive(event, sql):
     txt_list = []
     # sql_result = get_response_message(con, event.message.text)
     sql_result = select_execute(con, sql)
+    try:
+        if len(sql_result) == 0:
+            line_bot_api.reply_message(
+                event.reply_token,
+                [TextSendMessage(text='ヒットしませんでした')])
 
-    if len(sql_result) == 0:
-        line_bot_api.reply_message(
-            event.reply_token,
-            [TextSendMessage(text='ヒットしませんでした')])
+        else:
+            for res in sql_result:
+                txt = f'曲名:{res[0]}\nアーティスト名:{res[1]}\n配信日:{res[2]}\n{res[3]}'
+                txt_list.append(f'{txt}')
 
-    else:
-        for res in sql_result:
-            txt = f'曲名:{res[0]}\n配信日:{res[3]}\n枠名:{res[4]}\nurl:{res[1]}\n'
-            txt_list.append(f'{txt}\n')
+            str = '\n\n'.join(txt_list)
+            line_bot_api.reply_message(
+                event.reply_token,
+                [TextSendMessage(text=f'{len(sql_result)}件ヒットしました'), TextSendMessage(text=str)])
 
-        str = ''.join(txt_list)
-        line_bot_api.reply_message(
-            event.reply_token,
-            [TextSendMessage(text=f'{len(sql_result)}件ヒットしました'), TextSendMessage(text=str)])
+    except LineBotApiError:
+        print('04')
+        message = 'エラーが発生したようです。時間を置いて再度お試しください。error_code=04'
+        reply_message(event, message)
+        push_error_message(message)
 
 
 # bot側から何か返信させるときはここ
@@ -236,23 +259,44 @@ def reply_message(event, message):
     )
 
 
+# 管理者にエラーの内容をpushする
+def push_error_message(message):
+    try:
+        line_bot_api.push_message(
+            MY_LINE_ID, TextSendMessage(text=message))
+    except LineBotApiError as e:
+        print(e)
+
+
+# fileを受け取ったら反応する
+@handler.add(MessageEvent, message=FileMessage)
+def file_recieve(event):
+    file_event = event
+    result = insert_song_date(con, file_event)
+    reply_message(file_event, result)
+
+
 # 日付選択の際、ここで受け取る
 @handler.add(PostbackEvent)
 def handle_postback(event):
     if isinstance(event, PostbackEvent):
         # event.postback.params['date']  # dictのキーはmodeのもの
         try:
-            sql = date_choice(event, event.postback.params['date'])
+            sql = date_choice(event.postback.params['date'])
             sql_result_recive(event, sql)
+
         except LineBotApiError:
+            print('01')
             message = '処理に時間がかかっています。少し時間を置いてから再度お試しください。'
-            print('error')
             reply_message(event, message)
+
+            error_mes = f"{STATE}\n{event.postback.params['date']}\n{sql}\nerror_code=01"
+            push_error_message(error_mes)
 
 
 # ポート番号の設定
 if __name__ == "__main__":
-    app.run()
-    # port = int(os.getenv('PORT'))
-    # app.run(host="0.0.0.0", port=port)
+    # app.run()
+    port = int(os.getenv('PORT'))
+    app.run(host="0.0.0.0", port=port)
     con.close()

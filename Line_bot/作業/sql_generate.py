@@ -2,7 +2,6 @@
 # 後ろで動いてるやつら
 # sql文を生成する
 
-# from flask import Flask, request, abort
 from linebot.models import *
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
@@ -14,7 +13,6 @@ from linebot import (
 from os.path import join, dirname
 from dotenv import load_dotenv
 import os
-import psycopg2
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -28,7 +26,7 @@ handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 
 # DatetimePickerTemplateAction から日付決定
-def date_template_make(USER_ID):
+def date_template_make():
     date_picker = TemplateSendMessage(
         alt_text='日付を選択',
         template=ButtonsTemplate(
@@ -41,7 +39,7 @@ def date_template_make(USER_ID):
                     mode='date',
                     initial='2019-06-01',
                     min='2019-06-01',
-                    max='2099-12-31'
+                    max='2050-12-31'
                 )
             ]
         )
@@ -52,25 +50,27 @@ def date_template_make(USER_ID):
 # 曲名からsql文作成
 def song_title_choice(event):
     mes = event.message.text
-    sql = f"select song_title, song_url, initial, day, stream_title from song_list where song_title like '{mes}%' or initial like '{mes}%' ORDER BY day asc;"
+    sql = f"select song_title, artist_anime_name, day, song_url from song_list where pf = 'YT' and (song_title like '{mes}%' or initial like '{mes}%') ORDER BY day asc;"
+
     return sql
 
 
 # 日付からsql文作成
-def date_choice(event, date):
-    sql = f"select song_title, song_url, initial, day, stream_title from song_list where day = '{date}';"
+def date_choice(date):
+    sql = f"select song_title, artist_anime_name, day, song_url from song_list where pf = 'YT' and day = '{date}';"
     return sql
 
 
 # 配信タイトル入力からsql文作成
 def stream_title_choice(event):
     mes = event.message.text
-    sql = f"select song_title, song_url, initial, day, stream_title from song_list where stream_title = '{mes}';"
+    sql = f"select song_title, artist_anime_name, day, song_url from song_list where pf = 'YT' and stream_title = '{mes}%';"
     return sql
 
 
 # アーティスト名からsql文作成
 def artist_choice(event):
     mes = event.message.text
-    sql = f"select song_title, song_url, initial, day, stream_title, artist_anime_name, vocaloid from song_list where artist_anime_name like '%{mes}%' or vocaloid like '%{mes}%' ORDER BY day asc;"
+    sql = f"select song_title, artist_anime_name, day, song_url from song_list where pf = 'YT' and artist_anime_name like '%{mes}%' ORDER BY day asc;"
+
     return sql

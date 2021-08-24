@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-# 後ろで動いてるやつら
+# DBにアクセスする
 
-# 必要モジュールの読み込み
-from flask import Flask, request, abort
 from linebot.models import *
-
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
@@ -14,7 +11,6 @@ from linebot import (
 
 from os.path import join, dirname
 from dotenv import load_dotenv
-from local_config import TEXT_01, TEXT_02, TEXT_03
 import os
 import psycopg2
 
@@ -31,31 +27,23 @@ handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 # DB接続
 def db_connect():
-    HOST = os.environ['HOST']
-    PORT_DB = os.environ['PORT_DB']
-    DB_NAME = os.environ['DB_NAME']
-    USER = os.environ['USER']
-    PASSWORD = os.environ['PASSWORD']
+    try:
+        HOST = os.environ['HOST']
+        PORT_DB = os.environ['PORT_DB']
+        DB_NAME = os.environ['DB_NAME']
+        USER = os.environ['USER']
+        PASSWORD = os.environ['PASSWORD']
 
-    con = psycopg2.connect('host=' + HOST +
-                           ' port=' + PORT_DB +
-                           ' dbname=' + DB_NAME +
-                           ' user=' + USER +
-                           ' password=' + PASSWORD)
+        con = psycopg2.connect('host=' + HOST +
+                               ' port=' + PORT_DB +
+                               ' dbname=' + DB_NAME +
+                               ' user=' + USER +
+                               ' password=' + PASSWORD)
 
-    return con
-
-
-"""
-# 返事取得関数
-def get_sql_exe(con, sql):
-    if len(mes_from) < 2:
-        return -1
-
-    result = select_execute(con, sql)
-
-    return result
-"""
+        return con
+    except Exception as e:
+        print(e)
+        print('db_connect_error')
 
 
 # select文実行
@@ -63,7 +51,7 @@ def select_execute(con, sql):
     with con.cursor() as cur:
         cur.execute(sql)
         rows = cur.fetchall()
-    con.commit()
+        con.commit()
 
     return rows
 
@@ -75,7 +63,7 @@ def insert_state(con, USER_ID, state):
 
     with con.cursor() as cur:
         cur.execute(sql)
-    con.commit()
+        con.commit()
 
 
 def update_state(con, USER_ID, state):
@@ -84,7 +72,7 @@ def update_state(con, USER_ID, state):
 
     with con.cursor() as cur:
         cur.execute(sql)
-    con.commit()
+        con.commit()
 
 
 def id_search(con, USER_ID, state):
@@ -92,7 +80,7 @@ def id_search(con, USER_ID, state):
     with con.cursor() as cur:
         cur.execute(sql)
         rows = cur.fetchall()
-    con.commit()
+        con.commit()
     # print(rows)
 
     if len(rows) == 0:
