@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # 画面を作るやつ、反応するやつ
-# 必要モジュールの読み込み
 
 from linebot.models import *
 from linebot.exceptions import (
@@ -18,9 +17,11 @@ from os.path import join, dirname
 from dotenv import load_dotenv
 import os
 
+# .envファイルの読み込み
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
+# lineチャンネルのアクセストークン、チャンネルシークレット
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ['YOUR_CHANNEL_ACCESS_TOKEN']
 YOUR_CHANNEL_SECRET = os.environ['YOUR_CHANNEL_SECRET']

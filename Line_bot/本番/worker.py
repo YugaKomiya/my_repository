@@ -38,7 +38,7 @@ yesterday_yv_file_path = f"./youtubevideos_{yester_day}.csv" # './20XX-YY-(ZZ-1)
 yesterday_sl_file_path = f"./songlist_{yester_day}.csv" # './20XX-YY-(ZZ-1).csv'
 
 # DB接続エンジンを作成
-DATABASE_URL = os.environ['DATABASE_URL'] # DATABASE_URL
+DATABASE_URL = os.environ['DATABASE_URL_2'] # DATABASE_URL
 engine = create_engine(DATABASE_URL)
 
 # DB接続
@@ -66,7 +66,7 @@ def songlist_output():
 		rows = cur.fetchall()
 		con.commit()
 	try:
-		song_list_items = pd.DataFrame(rows, columns=['song_title', 'song_url', 'initial', 'artist_anime_name', 'vocaloid', 'sound_source', 'day', 'pf', 'stream_title', 'stream_url', 'created_at'])
+		song_list_items = pd.DataFrame(rows, columns=['id','song_title', 'song_url', 'initial', 'artist_anime_name', 'vocaloid', 'sound_source', 'day', 'pf', 'stream_title', 'stream_url', 'created_at'])
 		song_list_items.to_csv(yesterday_sl_file_path, index=None, encoding='utf-8')
 		print('sl output ok!')
 	except:
